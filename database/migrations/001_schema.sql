@@ -16,7 +16,11 @@ create table public.shift_requirements (
   required_waiters int not null default 2,
   required_cooks int not null default 3,
   target_date date,
-  unique nulls not distinct (day_of_week, shift_type, target_date)
+  unique nulls not distinct (day_of_week, shift_type, target_date),
+  check (
+    (day_of_week is not null and target_date is null)
+    or (target_date is not null)
+  )
 );
 
 -- constraints (one per employee per week)
@@ -50,9 +54,13 @@ create table public.schedule_shifts (
   conflict_reason text
 );
 
+-- Indexes for common queries
+create index on public.schedule_shifts(schedule_id);
+create index on public.schedule_shifts(employee_id);
+
 -- auto-create profile on new auth user
 create or replace function public.handle_new_user()
-returns trigger language plpgsql security definer as $$
+returns trigger language plpgsql security definer set search_path = public as $$
 begin
   insert into public.profiles (id, name, role)
   values (new.id, coalesce(new.raw_user_meta_data->>'name', new.email), 'employee');
