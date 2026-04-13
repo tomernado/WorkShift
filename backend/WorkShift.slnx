@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="WorkShift.Api.Tests/WorkShift.Api.Tests.csproj" />
+  <Project Path="WorkShift.Api/WorkShift.Api.csproj" />
+</Solution>
