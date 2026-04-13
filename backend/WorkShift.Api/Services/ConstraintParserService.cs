@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using WorkShift.Api.Models;
 
 namespace WorkShift.Api.Services;
@@ -10,6 +11,7 @@ public class ConstraintParserService
 {
     private readonly HttpClient _http;
     private readonly string _apiKey;
+    private readonly ILogger<ConstraintParserService> _logger;
 
     private const string SystemPrompt = """
         You are a scheduling assistant. The user will describe their work availability in Hebrew or English.
@@ -27,16 +29,20 @@ public class ConstraintParserService
         Return ONLY the JSON object. No explanation, no markdown, no code fences.
         """;
 
-    // Constructor for DI — reads api key from IConfiguration
-    public ConstraintParserService(IConfiguration config)
-        : this(new HttpClient(), config["Anthropic:ApiKey"] ?? "")
-    { }
+    // Constructor for DI
+    public ConstraintParserService(IConfiguration config, ILogger<ConstraintParserService> logger)
+        : this(new HttpClient(), config["Anthropic:ApiKey"] ?? "", logger)
+    {
+        if (string.IsNullOrEmpty(config["Anthropic:ApiKey"]))
+            logger.LogWarning("Anthropic:ApiKey is not configured. Constraint parsing will always return empty results.");
+    }
 
-    // Constructor for testing — accepts injected HttpClient and api key
-    public ConstraintParserService(HttpClient httpClient, string apiKey)
+    // Constructor for testing
+    public ConstraintParserService(HttpClient httpClient, string apiKey, ILogger<ConstraintParserService>? logger = null)
     {
         _http = httpClient;
         _apiKey = apiKey;
+        _logger = logger ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ConstraintParserService>.Instance;
     }
 
     public async Task<ParsedConstraint> ParseAsync(string text)
@@ -61,6 +67,12 @@ public class ConstraintParserService
             var response = await _http.SendAsync(request);
             var json = await response.Content.ReadAsStringAsync();
 
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Anthropic API returned {StatusCode}. Falling back to empty constraint.", response.StatusCode);
+                return new ParsedConstraint();
+            }
+
             using var doc = JsonDocument.Parse(json);
             var rawText = doc.RootElement
                 .GetProperty("content")[0]
@@ -71,9 +83,10 @@ public class ConstraintParserService
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
                 ?? new ParsedConstraint();
         }
-        catch
+        catch (Exception ex)
         {
             // Graceful fallback — the UI will show an empty chip grid for the user to fill manually
+            _logger.LogWarning(ex, "ConstraintParser fallback: failed to parse constraints for input of length {Length}", text.Length);
             return new ParsedConstraint();
         }
     }
