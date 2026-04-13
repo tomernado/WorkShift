@@ -7,6 +7,8 @@ public class SchedulerService
     private static readonly string[] DayNames =
         ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday"];
 
+    private static readonly string[] ShiftTypes = ["morning", "evening"];
+
     /// <summary>
     /// Pure function — no I/O. Returns list of ScheduleShift (including unfilled conflict slots).
     /// </summary>
@@ -23,7 +25,7 @@ public class SchedulerService
         {
             var actualDate = weekStart.AddDays(day);
 
-            foreach (var shiftType in new[] { "morning", "evening" })
+            foreach (var shiftType in ShiftTypes)
             {
                 // target_date override takes precedence over day_of_week default
                 var req = requirements.FirstOrDefault(r =>
@@ -63,15 +65,15 @@ public class SchedulerService
             // Hard block: cannot_work
             .Where(e => !constraints.TryGetValue(e.Id, out var c) || !c.CannotWork.Contains(slotKey))
             // Max 5 shifts per week
-            .Where(e => shiftCounts[e.Id] < 5)
+            .Where(e => shiftCounts.GetValueOrDefault(e.Id, 0) < 5)
             // No same-day double shift (8h rest rule)
-            .Where(e => !result.Any(s => s.EmployeeId == e.Id && s.DayOfWeek == day && !s.IsConflict))
+            .Where(e => !result.Any(s => s.EmployeeId == e.Id && s.DayOfWeek == day && s.EmployeeId != null))
             // No evening→morning next-day (8h rest rule)
             .Where(e => shiftType != "morning" ||
-                        !result.Any(s => s.EmployeeId == e.Id && s.DayOfWeek == day - 1 && s.ShiftType == "evening" && !s.IsConflict))
+                        !result.Any(s => s.EmployeeId == e.Id && s.DayOfWeek == day - 1 && s.ShiftType == "evening" && s.EmployeeId != null))
             // Rotation fairness: prefer fewer shifts assigned, deprioritize prefer_not
             .OrderBy(e => constraints.TryGetValue(e.Id, out var c) && c.PreferNot.Contains(slotKey) ? 1 : 0)
-            .ThenBy(e => shiftCounts[e.Id])
+            .ThenBy(e => shiftCounts.GetValueOrDefault(e.Id, 0))
             .ToList();
 
         int assigned = 0;
@@ -97,16 +99,21 @@ public class SchedulerService
         }
 
         // Unfilled slots
-        for (int i = assigned; i < required; i++)
+        if (assigned < required)
         {
-            result.Add(new ScheduleShift
+            var missing = required - assigned;
+            var reason = $"חסר כוח אדם: נדרש {required} {jobRole}, מולאו {assigned}, חסרים {missing}";
+            for (int i = 0; i < missing; i++)
             {
-                EmployeeId = null,
-                DayOfWeek = day,
-                ShiftType = shiftType,
-                IsConflict = true,
-                ConflictReason = $"חסר כוח אדם: נדרש {required} {jobRole}, זמין {assigned}"
-            });
+                result.Add(new ScheduleShift
+                {
+                    EmployeeId = null,
+                    DayOfWeek = day,
+                    ShiftType = shiftType,
+                    IsConflict = true,
+                    ConflictReason = reason
+                });
+            }
         }
     }
 }
