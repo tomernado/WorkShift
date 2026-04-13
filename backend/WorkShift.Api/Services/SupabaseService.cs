@@ -100,14 +100,18 @@ public class SupabaseService
         var response = await _http.SendAsync(req);
         response.EnsureSuccessStatusCode();
         var json = await response.Content.ReadAsStringAsync();
-        var arr = JsonSerializer.Deserialize<List<JsonElement>>(json, JsonOpts)!;
-        return arr[0].GetProperty("id").GetString()!;
+        var arr = JsonSerializer.Deserialize<List<JsonElement>>(json, JsonOpts);
+        if (arr == null || arr.Count == 0)
+            throw new InvalidOperationException("Supabase did not return the upserted schedule row.");
+        return arr[0].GetProperty("id").GetString()
+            ?? throw new InvalidOperationException("Supabase returned a schedule row without an id.");
     }
 
     public async Task SaveShiftsAsync(string scheduleId, List<ScheduleShift> shifts)
     {
         // Delete existing draft shifts for this schedule
-        await _http.DeleteAsync($"{_baseUrl}/rest/v1/schedule_shifts?schedule_id=eq.{scheduleId}");
+        var deleteResponse = await _http.DeleteAsync($"{_baseUrl}/rest/v1/schedule_shifts?schedule_id=eq.{scheduleId}");
+        deleteResponse.EnsureSuccessStatusCode();
 
         if (shifts.Count == 0) return;
 
