@@ -33,6 +33,10 @@ jobs:
         run: dotnet test --no-build -c Release --verbosity normal
         continue-on-error: true
 
+      - name: Docker build check
+        run: docker build -t workshift-api .
+        working-directory: backend/WorkShift.Api
+
   frontend:
     name: Frontend — Type-check & Build
     runs-on: ubuntu-latest

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: workshift-api
+    runtime: docker
+    dockerfilePath: ./backend/WorkShift.Api/Dockerfile
+    dockerContext: ./backend/WorkShift.Api
+    plan: free
+    envVars:
+      - key: Supabase__Url
+        sync: false
+      - key: Supabase__ServiceRoleKey
+        sync: false
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
