@@ -33,6 +33,14 @@ export default function EmployeeTable() {
         job_role: editing.job_role,
         is_active: editing.is_active,
       }).eq('id', editing.id);
+      if (editing.password && editing.password.length >= 4) {
+        const apiUrl = import.meta.env.VITE_API_URL as string;
+        await fetch(`${apiUrl}/api/employees/${editing.id}/password`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: editing.password }),
+        });
+      }
     } else {
       const apiUrl = import.meta.env.VITE_API_URL as string;
       const res = await fetch(`${apiUrl}/api/employees`, {
@@ -103,6 +111,15 @@ export default function EmployeeTable() {
               <MenuItem value="cook">טבח</MenuItem>
             </Select>
           </FormControl>
+          {editing.id && (
+            <TextField
+              label="קוד כניסה חדש"
+              helperText="השאר ריק כדי לא לשנות. לפחות 4 ספרות."
+              value={editing.password ?? ''}
+              inputProps={{ maxLength: 8 }}
+              onChange={e => setEditing(p => ({ ...p, password: e.target.value }))}
+            />
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpen(false)}>ביטול</Button>

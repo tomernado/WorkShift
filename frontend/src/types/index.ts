@@ -11,6 +11,7 @@ export interface Profile {
   job_role: JobRole | null;
   is_active: boolean;
   created_at: string;
+  email?: string | null;
 }
 
 export interface ShiftRequirement {
@@ -43,6 +44,7 @@ export interface Schedule {
   id: string;
   week_start: string;
   status: ScheduleStatus;
+  announcement: string | null;
 }
 
 export interface ScheduleShift {
@@ -53,6 +55,8 @@ export interface ScheduleShift {
   shift_type: ShiftType;
   is_conflict: boolean;
   conflict_reason: string | null;
+  employee_note: string | null;
+  shift_note: string | null;
   profile?: Profile;
 }
 

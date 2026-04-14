@@ -47,6 +47,9 @@ public class ConstraintParserService
 
     public async Task<ParsedConstraint> ParseAsync(string text)
     {
+        if (string.IsNullOrEmpty(_apiKey))
+            return ParseLocally(text);
+
         var requestBody = JsonSerializer.Serialize(new
         {
             model = "claude-sonnet-4-6",
@@ -69,8 +72,8 @@ public class ConstraintParserService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Anthropic API returned {StatusCode}. Falling back to empty constraint.", response.StatusCode);
-                return new ParsedConstraint();
+                _logger.LogWarning("Anthropic API returned {StatusCode}. Falling back to local parser.", response.StatusCode);
+                return ParseLocally(text);
             }
 
             using var doc = JsonDocument.Parse(json);
@@ -85,9 +88,79 @@ public class ConstraintParserService
         }
         catch (Exception ex)
         {
-            // Graceful fallback — the UI will show an empty chip grid for the user to fill manually
-            _logger.LogWarning(ex, "ConstraintParser fallback: failed to parse constraints for input of length {Length}", text.Length);
-            return new ParsedConstraint();
+            _logger.LogWarning(ex, "ConstraintParser Claude call failed, falling back to local parser.");
+            return ParseLocally(text);
         }
+    }
+
+    /// <summary>
+    /// Rule-based Hebrew parser — no API required.
+    /// Handles patterns like: "לא יכול ראשון בוקר", "עדיף לא שני", "לא יכולה ביום שלישי בערב"
+    /// </summary>
+    private static ParsedConstraint ParseLocally(string text)
+    {
+        var cannot = new List<string>();
+        var preferNot = new List<string>();
+
+        var dayMap = new Dictionary<string, string>
+        {
+            ["ראשון"] = "sunday",
+            ["שני"]   = "monday",
+            ["שלישי"] = "tuesday",
+            ["רביעי"] = "wednesday",
+            ["חמישי"] = "thursday",
+            ["שישי"]  = "friday",
+        };
+
+        // Split on common Hebrew connectives + punctuation
+        var clauses = System.Text.RegularExpressions.Regex.Split(
+            text, @"[,،;וגם\n]|וגם|אבל|רק");
+
+        foreach (var clause in clauses)
+        {
+            if (string.IsNullOrWhiteSpace(clause)) continue;
+
+            bool isCannotWork = clause.Contains("לא יכול") || clause.Contains("לא יכולה")
+                             || clause.Contains("לא אוכל") || clause.Contains("לא פנוי")
+                             || clause.Contains("לא פנויה") || clause.Contains("חסום");
+
+            bool isPreferNot = !isCannotWork &&
+                               (clause.Contains("עדיף לא") || clause.Contains("מעדיף לא")
+                             || clause.Contains("מעדיפה לא") || clause.Contains("לא נוח")
+                             || clause.Contains("קשה לי"));
+
+            if (!isCannotWork && !isPreferNot) continue;
+
+            // Find days mentioned in this clause
+            var days = dayMap
+                .Where(kv => clause.Contains(kv.Key))
+                .Select(kv => kv.Value)
+                .ToList();
+
+            if (days.Count == 0) continue;
+
+            // Find shifts mentioned
+            bool hasMorning = clause.Contains("בוקר");
+            bool hasEvening = clause.Contains("ערב");
+            var shifts = hasMorning || hasEvening
+                ? new List<string>()
+                : new List<string> { "morning", "evening" }; // no shift mentioned = both
+
+            if (hasMorning) shifts.Add("morning");
+            if (hasEvening) shifts.Add("evening");
+
+            var slots = days.SelectMany(d => shifts.Select(s => $"{d}_{s}")).ToList();
+
+            if (isCannotWork) cannot.AddRange(slots);
+            else preferNot.AddRange(slots);
+        }
+
+        return new ParsedConstraint
+        {
+            CannotWork = cannot.Distinct().ToList(),
+            PreferNot  = preferNot.Distinct().ToList(),
+            Prefer     = [],
+            Notes      = "",
+        };
     }
 }

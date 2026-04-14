@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Tabs, Tab, Typography, AppBar, Toolbar, Button } from '@mui/material';
+import { Box, Tabs, Tab, Typography, AppBar, Toolbar, Button, Alert } from '@mui/material';
 import { supabase } from '../lib/supabase';
 import { Profile, ScheduleShift, Schedule } from '../types';
 import WeeklyGrid from '../components/schedule/WeeklyGrid';
@@ -46,10 +46,16 @@ export default function EmployeeDashboard({ profile }: Props) {
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
         <Tabs value={tab} onChange={(_, v) => setTab(v)} centered>
           <Tab label="המשמרות שלי" />
-          <Tab label="הגשת אילוצים" />
+          <Tab label="הגשת משמרות" />
         </Tabs>
       </Box>
       <Box p={3}>
+        {schedule?.announcement && (
+          <Alert severity="info" sx={{ mb: 2, fontWeight: 500 }}>
+            <Typography variant="body2" fontWeight={700} gutterBottom>הודעה מהמנהל:</Typography>
+            <Typography variant="body2">{schedule.announcement}</Typography>
+          </Alert>
+        )}
         {tab === 0 && (
           schedule
             ? <WeeklyGrid shifts={shifts} employees={employees} currentEmployeeId={profile.id} />

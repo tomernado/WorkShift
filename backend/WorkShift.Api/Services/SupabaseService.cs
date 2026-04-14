@@ -84,7 +84,7 @@ public class SupabaseService
 
     public async Task<string> UpsertScheduleAsync(DateOnly weekStart)
     {
-        var url = $"{_baseUrl}/rest/v1/schedules";
+        var url = $"{_baseUrl}/rest/v1/schedules?on_conflict=week_start";
         var body = JsonSerializer.Serialize(new
         {
             week_start = weekStart.ToString("yyyy-MM-dd"),
@@ -154,6 +154,50 @@ public class SupabaseService
         response.EnsureSuccessStatusCode();
     }
 
+    public async Task PatchShiftDetailsAsync(
+        string shiftId,
+        string? employeeId,
+        string? employeeNote,
+        string? shiftNote,
+        string? scheduleId,
+        int? dayOfWeek,
+        string? shiftType)
+    {
+        // Build partial update for this specific shift row
+        var dict = new Dictionary<string, object?>();
+        if (employeeId != null)     dict["employee_id"]    = employeeId == "" ? null : (object?)employeeId;
+        if (employeeNote != null)   dict["employee_note"]  = employeeNote;
+        if (shiftNote != null)      dict["shift_note"]     = shiftNote;
+
+        if (dict.Count > 0)
+        {
+            var url = $"{_baseUrl}/rest/v1/schedule_shifts?id=eq.{shiftId}";
+            var body = JsonSerializer.Serialize(dict);
+            var req = new HttpRequestMessage(HttpMethod.Patch, url)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json")
+            };
+            req.Headers.Add("Prefer", "return=minimal");
+            var resp = await _http.SendAsync(req);
+            resp.EnsureSuccessStatusCode();
+        }
+
+        // If shift_note provided, propagate to all other rows in the same slot
+        if (shiftNote != null && scheduleId != null && dayOfWeek.HasValue && shiftType != null)
+        {
+            var slotUrl = $"{_baseUrl}/rest/v1/schedule_shifts" +
+                $"?schedule_id=eq.{scheduleId}&day_of_week=eq.{dayOfWeek}&shift_type=eq.{shiftType}&id=neq.{shiftId}";
+            var slotBody = JsonSerializer.Serialize(new { shift_note = shiftNote });
+            var slotReq = new HttpRequestMessage(HttpMethod.Patch, slotUrl)
+            {
+                Content = new StringContent(slotBody, Encoding.UTF8, "application/json")
+            };
+            slotReq.Headers.Add("Prefer", "return=minimal");
+            var slotResp = await _http.SendAsync(slotReq);
+            slotResp.EnsureSuccessStatusCode();
+        }
+    }
+
     public async Task PublishScheduleAsync(string scheduleId)
     {
         var url = $"{_baseUrl}/rest/v1/schedules?id=eq.{scheduleId}";
@@ -169,9 +213,12 @@ public class SupabaseService
 
     public async Task<string> CreateEmployeeAsync(string name, string jobRole)
     {
+        // Generate a stable ASCII email from a new UUID (avoids Hebrew chars in email)
+        var tempId = Guid.NewGuid().ToString("N");
+        var email = $"emp-{tempId}@workshift.local";
+
         // Create auth user
         var authUrl = $"{_baseUrl}/auth/v1/admin/users";
-        var email = $"{name.Replace(" ", ".")}@workshift.local";
         var authBody = JsonSerializer.Serialize(new
         {
             email,
@@ -184,15 +231,19 @@ public class SupabaseService
             Content = new StringContent(authBody, Encoding.UTF8, "application/json")
         };
         var authResp = await _http.SendAsync(authReq);
-        authResp.EnsureSuccessStatusCode();
+        if (!authResp.IsSuccessStatusCode)
+        {
+            var err = await authResp.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"Supabase auth error: {err}");
+        }
         var authJson = await authResp.Content.ReadAsStringAsync();
         using var authDoc = JsonDocument.Parse(authJson);
         var userId = authDoc.RootElement.GetProperty("id").GetString()
             ?? throw new InvalidOperationException("Auth user creation did not return an id.");
 
-        // Update the auto-created profile
+        // Update the auto-created profile (store email so frontend can use it for login)
         var profileUrl = $"{_baseUrl}/rest/v1/profiles?id=eq.{userId}";
-        var profileBody = JsonSerializer.Serialize(new { name, role = "employee", job_role = jobRole });
+        var profileBody = JsonSerializer.Serialize(new { name, role = "employee", job_role = jobRole, email });
         var profileReq = new HttpRequestMessage(HttpMethod.Patch, profileUrl)
         {
             Content = new StringContent(profileBody, Encoding.UTF8, "application/json")
@@ -202,5 +253,21 @@ public class SupabaseService
         profileResp.EnsureSuccessStatusCode();
 
         return userId;
+    }
+
+    public async Task UpdateEmployeePasswordAsync(string userId, string newPassword)
+    {
+        var url = $"{_baseUrl}/auth/v1/admin/users/{userId}";
+        var body = JsonSerializer.Serialize(new { password = newPassword });
+        var req = new HttpRequestMessage(HttpMethod.Put, url)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        var resp = await _http.SendAsync(req);
+        if (!resp.IsSuccessStatusCode)
+        {
+            var err = await resp.Content.ReadAsStringAsync();
+            throw new InvalidOperationException($"Supabase password update error: {err}");
+        }
     }
 }

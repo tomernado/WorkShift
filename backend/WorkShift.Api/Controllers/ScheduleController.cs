@@ -41,10 +41,28 @@ public class ScheduleController : ControllerBase
     [HttpPatch("shifts/{id}")]
     public async Task<IActionResult> UpdateShift(string id, [FromBody] UpdateShiftRequest req)
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(req.ShiftType))
-            return BadRequest(new { error = "shift id, dayOfWeek and shiftType are required" });
+        if (string.IsNullOrWhiteSpace(id))
+            return BadRequest(new { error = "shift id is required" });
 
-        await _db.UpdateShiftAsync(id, req.DayOfWeek, req.ShiftType);
+        // Drag-and-drop: dayOfWeek + shiftType present
+        if (req.ShiftType != null)
+        {
+            await _db.UpdateShiftAsync(id, req.DayOfWeek ?? 0, req.ShiftType);
+        }
+
+        // ShiftSlotPanel: notes / employee swap
+        if (req.EmployeeId != null || req.EmployeeNote != null || req.ShiftNote != null)
+        {
+            await _db.PatchShiftDetailsAsync(
+                id,
+                req.EmployeeId,
+                req.EmployeeNote,
+                req.ShiftNote,
+                req.ScheduleId,
+                req.DayOfWeek,
+                req.ShiftType);
+        }
+
         return Ok();
     }
 
@@ -59,5 +77,11 @@ public class ScheduleController : ControllerBase
     }
 
     public record GenerateRequest(string WeekStart);
-    public record UpdateShiftRequest(int DayOfWeek, string ShiftType);
+    public record UpdateShiftRequest(
+        int? DayOfWeek,
+        string? ShiftType,
+        string? EmployeeId,
+        string? EmployeeNote,
+        string? ShiftNote,
+        string? ScheduleId);
 }

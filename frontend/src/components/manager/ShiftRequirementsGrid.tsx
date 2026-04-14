@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Box, Paper, Typography, TextField, Button, Alert } from '@mui/material';
+import {
+  Box, Typography, Button, Alert, TextField,
+  Table, TableHead, TableBody, TableRow, TableCell, Paper,
+} from '@mui/material';
 import { supabase } from '../../lib/supabase';
 import { ShiftRequirement, DAY_NAMES, ShiftType, SHIFT_LABELS } from '../../types';
 
@@ -29,7 +32,7 @@ export default function ShiftRequirementsGrid() {
     const key = `${day}_${type}`;
     setGrid(prev => ({
       ...prev,
-      [key]: { ...(prev[key] ?? { waiters: 2, cooks: 3, reqId: null }), [field]: parseInt(value) || 0 }
+      [key]: { ...(prev[key] ?? { waiters: 2, cooks: 3, reqId: null }), [field]: parseInt(value) || 0 },
     }));
   }
 
@@ -47,40 +50,64 @@ export default function ShiftRequirementsGrid() {
         }, { onConflict: 'day_of_week,shift_type,target_date' });
       }
     }
-    setSaving(false); setSaved(true);
+    setSaving(false);
+    setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
 
   return (
-    <Box maxWidth={900} mx="auto">
+    <Box maxWidth={500} mx="auto">
       <Typography variant="h6" mb={2}>דרישות משמרת ברירת מחדל</Typography>
-      <Paper variant="outlined" sx={{ p: 2, overflowX: 'auto' }}>
-        <Box display="grid" gridTemplateColumns="100px repeat(6, 1fr)" gap={1} minWidth={700}>
-          <Box />
-          {DAY_NAMES.map(d => (
-            <Typography key={d} variant="caption" fontWeight={700} textAlign="center">{d}</Typography>
-          ))}
-          {SHIFTS.map(type => (
-            <>
-              <Typography key={`label-${type}`} variant="caption" sx={{ display: 'flex', alignItems: 'center' }} fontWeight={500}>
-                {SHIFT_LABELS[type]}
-              </Typography>
-              {Array.from({ length: 6 }, (_, day) => {
+      <Paper variant="outlined">
+        <Table size="small">
+          <TableHead>
+            <TableRow sx={{ bgcolor: 'primary.main' }}>
+              <TableCell sx={{ color: 'white', fontWeight: 700 }}>יום</TableCell>
+              <TableCell sx={{ color: 'white', fontWeight: 700 }}>משמרת</TableCell>
+              <TableCell align="center" sx={{ color: 'white', fontWeight: 700 }}>מלצרים</TableCell>
+              <TableCell align="center" sx={{ color: 'white', fontWeight: 700 }}>טבחים</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {Array.from({ length: 6 }, (_, day) => (
+              SHIFTS.map((type, shiftIdx) => {
                 const cell = grid[`${day}_${type}`] ?? { waiters: 2, cooks: 3, reqId: null };
                 return (
-                  <Box key={`${type}-${day}`} display="flex" flexDirection="column" gap={0.5}>
-                    <TextField size="small" label="מלצרים" type="number" value={cell.waiters}
-                      onChange={e => update(day, type, 'waiters', e.target.value)}
-                      inputProps={{ min: 0, style: { textAlign: 'center' } }} />
-                    <TextField size="small" label="טבחים" type="number" value={cell.cooks}
-                      onChange={e => update(day, type, 'cooks', e.target.value)}
-                      inputProps={{ min: 0, style: { textAlign: 'center' } }} />
-                  </Box>
+                  <TableRow
+                    key={`${day}_${type}`}
+                    sx={{ bgcolor: shiftIdx === 0 ? 'grey.50' : 'white' }}
+                  >
+                    {shiftIdx === 0 && (
+                      <TableCell
+                        rowSpan={2}
+                        sx={{ fontWeight: 700, verticalAlign: 'middle', borderLeft: '3px solid', borderColor: 'primary.main' }}
+                      >
+                        {DAY_NAMES[day]}
+                      </TableCell>
+                    )}
+                    <TableCell sx={{ color: 'text.secondary', fontWeight: 500 }}>
+                      {SHIFT_LABELS[type]}
+                    </TableCell>
+                    <TableCell align="center" sx={{ p: 0.75 }}>
+                      <TextField
+                        size="small" type="number" value={cell.waiters}
+                        onChange={e => update(day, type, 'waiters', e.target.value)}
+                        inputProps={{ min: 0, style: { textAlign: 'center', width: 44 } }}
+                      />
+                    </TableCell>
+                    <TableCell align="center" sx={{ p: 0.75 }}>
+                      <TextField
+                        size="small" type="number" value={cell.cooks}
+                        onChange={e => update(day, type, 'cooks', e.target.value)}
+                        inputProps={{ min: 0, style: { textAlign: 'center', width: 44 } }}
+                      />
+                    </TableCell>
+                  </TableRow>
                 );
-              })}
-            </>
-          ))}
-        </Box>
+              })
+            ))}
+          </TableBody>
+        </Table>
       </Paper>
       <Box mt={2} display="flex" gap={2} alignItems="center">
         <Button variant="contained" onClick={save} disabled={saving}>שמור דרישות</Button>

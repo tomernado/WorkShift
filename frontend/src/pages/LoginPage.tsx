@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.from('profiles').select('id,name,role').eq('is_active', true)
+    supabase.from('profiles').select('id,name,role,email').eq('is_active', true)
       .then(({ data }) => setEmployees(data ?? []));
   }, []);
 
@@ -24,7 +24,7 @@ export default function LoginPage() {
     const selected = employees.find(e => e.name === selectedName);
     if (!selected) { setError('יש לבחור שם'); setLoading(false); return; }
 
-    const email = `${selected.name.replace(/\s+/g, '.')}@workshift.local`;
+    const email = selected.email ?? `${selected.name.replace(/\s+/g, '.')}@workshift.local`;
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
 
     if (authError) setError('סיסמה שגויה');

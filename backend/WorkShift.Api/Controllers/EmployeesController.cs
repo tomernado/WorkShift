@@ -22,5 +22,16 @@ public class EmployeesController : ControllerBase
         return Ok(new { id });
     }
 
+    [HttpPut("{id}/password")]
+    public async Task<IActionResult> UpdatePassword(string id, [FromBody] UpdatePasswordRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Password) || req.Password.Length < 4)
+            return BadRequest(new { error = "password must be at least 4 characters" });
+
+        await _db.UpdateEmployeePasswordAsync(id, req.Password);
+        return NoContent();
+    }
+
     public record CreateEmployeeRequest(string Name, string JobRole);
+    public record UpdatePasswordRequest(string Password);
 }
