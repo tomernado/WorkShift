@@ -34,22 +34,15 @@ export default function EmployeeTable() {
         is_active: editing.is_active,
       }).eq('id', editing.id);
     } else {
-      // Create Supabase Auth user — requires service role key on backend
-      // For MVP: call backend endpoint or use admin API
-      const email = `${(editing.name ?? '').replace(/\s+/g, '.')}@workshift.local`;
-      const { data: authData, error } = await supabase.auth.admin.createUser({
-        email,
-        password: '0000',
-        user_metadata: { name: editing.name },
-        email_confirm: true,
+      const apiUrl = import.meta.env.VITE_API_URL as string;
+      const res = await fetch(`${apiUrl}/api/employees`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: editing.name, jobRole: editing.job_role }),
       });
-      if (error) { console.error('Create user error:', error); return; }
-      if (authData.user) {
-        await supabase.from('profiles').update({
-          name: editing.name,
-          role: 'employee',
-          job_role: editing.job_role,
-        }).eq('id', authData.user.id);
+      if (!res.ok) {
+        console.error('Create employee failed:', await res.text());
+        return;
       }
     }
     setOpen(false);

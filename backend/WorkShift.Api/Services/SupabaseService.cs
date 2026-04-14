@@ -165,4 +165,41 @@ public class SupabaseService
         var response = await _http.SendAsync(req);
         response.EnsureSuccessStatusCode();
     }
+
+    public async Task<string> CreateEmployeeAsync(string name, string jobRole)
+    {
+        // Create auth user
+        var authUrl = $"{_baseUrl}/auth/v1/admin/users";
+        var email = $"{name.Replace(" ", ".")}@workshift.local";
+        var authBody = JsonSerializer.Serialize(new
+        {
+            email,
+            password = "0000",
+            email_confirm = true,
+            user_metadata = new { name }
+        });
+        var authReq = new HttpRequestMessage(HttpMethod.Post, authUrl)
+        {
+            Content = new StringContent(authBody, Encoding.UTF8, "application/json")
+        };
+        var authResp = await _http.SendAsync(authReq);
+        authResp.EnsureSuccessStatusCode();
+        var authJson = await authResp.Content.ReadAsStringAsync();
+        using var authDoc = JsonDocument.Parse(authJson);
+        var userId = authDoc.RootElement.GetProperty("id").GetString()
+            ?? throw new InvalidOperationException("Auth user creation did not return an id.");
+
+        // Update the auto-created profile
+        var profileUrl = $"{_baseUrl}/rest/v1/profiles?id=eq.{userId}";
+        var profileBody = JsonSerializer.Serialize(new { name, role = "employee", job_role = jobRole });
+        var profileReq = new HttpRequestMessage(HttpMethod.Patch, profileUrl)
+        {
+            Content = new StringContent(profileBody, Encoding.UTF8, "application/json")
+        };
+        profileReq.Headers.Add("Prefer", "return=minimal");
+        var profileResp = await _http.SendAsync(profileReq);
+        profileResp.EnsureSuccessStatusCode();
+
+        return userId;
+    }
 }

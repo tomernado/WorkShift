@@ -87,7 +87,7 @@ export default function ConstraintEditor({ profile }: Props) {
       week_start: getWeekStart(),
       raw_text: text,
       parsed_json: gridToParsed(grid),
-      status: 'pending',
+      status: 'approved',
     }, { onConflict: 'employee_id,week_start' });
     setSaving(false);
     setSuccess(true);
@@ -110,7 +110,7 @@ export default function ConstraintEditor({ profile }: Props) {
       {grid !== null && (
         <>
           <Typography variant="body2" color="text.secondary" mb={1}>
-            לחץ על כל תא כדי לשנות: פנוי ← לא יכול ← עדיף לא
+            לחץ על כל תא לשינוי מצב: פנוי ← עדיף לא ← לא יכול ← פנוי
           </Typography>
           <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
             <Box display="grid" gridTemplateColumns="80px repeat(6, 1fr)" gap={1}>

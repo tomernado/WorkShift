@@ -3,6 +3,7 @@ backend/*/bin/
 backend/*/obj/
 backend/**/*.user
 *.DotSettings.user
+backend/*/appsettings.Development.json
 
 # Node
 frontend/node_modules/
