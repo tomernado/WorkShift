@@ -76,20 +76,21 @@ export default function DraggableScheduleGrid() {
 
   async function onDragEnd(result: DropResult) {
     if (!result.destination) return;
+    if (result.destination.droppableId === result.source.droppableId) return;
     const shiftId = result.draggableId;
-    const destParts = result.destination.droppableId.split('__');
-    const targetEmpId = destParts[2];
+    const [dayStr, targetShiftType] = result.destination.droppableId.split('__');
+    const targetDay = parseInt(dayStr, 10);
 
     setShifts(prev => prev.map(s =>
       s.id === shiftId
-        ? { ...s, employee_id: targetEmpId, is_conflict: false, conflict_reason: null }
+        ? { ...s, day_of_week: targetDay, shift_type: targetShiftType as ShiftType, is_conflict: false, conflict_reason: null }
         : s
     ));
 
     await fetch(`${apiUrl}/api/schedule/shifts/${shiftId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ employeeId: targetEmpId }),
+      body: JSON.stringify({ dayOfWeek: targetDay, shiftType: targetShiftType }),
     });
   }
 
@@ -153,7 +154,7 @@ export default function DraggableScheduleGrid() {
                   {Array.from({ length: 6 }, (_, day) => {
                     const cellShifts = getCellShifts(day, type);
                     const hasConflict = cellShifts.some(s => s.is_conflict);
-                    const dropId = `${day}__${type}__drop`;
+                    const dropId = `${day}__${type}`;
 
                     return (
                       <Droppable droppableId={dropId} key={`${type}-${day}`}>

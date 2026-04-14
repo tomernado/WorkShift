@@ -135,12 +135,13 @@ public class SupabaseService
         response.EnsureSuccessStatusCode();
     }
 
-    public async Task UpdateShiftAsync(string shiftId, string employeeId)
+    public async Task UpdateShiftAsync(string shiftId, int dayOfWeek, string shiftType)
     {
         var url = $"{_baseUrl}/rest/v1/schedule_shifts?id=eq.{shiftId}";
         var body = JsonSerializer.Serialize(new
         {
-            employee_id = employeeId,
+            day_of_week = dayOfWeek,
+            shift_type = shiftType,
             is_conflict = false,
             conflict_reason = (string?)null
         });

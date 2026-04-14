@@ -41,10 +41,10 @@ public class ScheduleController : ControllerBase
     [HttpPatch("shifts/{id}")]
     public async Task<IActionResult> UpdateShift(string id, [FromBody] UpdateShiftRequest req)
     {
-        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(req.EmployeeId))
-            return BadRequest(new { error = "shift id and employeeId are required" });
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(req.ShiftType))
+            return BadRequest(new { error = "shift id, dayOfWeek and shiftType are required" });
 
-        await _db.UpdateShiftAsync(id, req.EmployeeId);
+        await _db.UpdateShiftAsync(id, req.DayOfWeek, req.ShiftType);
         return Ok();
     }
 
@@ -59,5 +59,5 @@ public class ScheduleController : ControllerBase
     }
 
     public record GenerateRequest(string WeekStart);
-    public record UpdateShiftRequest(string EmployeeId);
+    public record UpdateShiftRequest(int DayOfWeek, string ShiftType);
 }
