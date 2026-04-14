@@ -1,0 +1,6 @@
+@WorkShift.Api_HostAddress = http://localhost:5035
+
+GET {{WorkShift.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
