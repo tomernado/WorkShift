@@ -13,7 +13,12 @@ export default function LoginPage() {
 
   useEffect(() => {
     supabase.from('profiles').select('id,name,role,email').eq('is_active', true)
-      .then(({ data }) => setEmployees((data ?? []) as Profile[]));
+      .then(({ data }) => {
+        const sorted = ((data ?? []) as Profile[]).sort((a, b) =>
+          a.role === 'manager' ? 1 : b.role === 'manager' ? -1 : a.name.localeCompare(b.name, 'he')
+        );
+        setEmployees(sorted);
+      });
   }, []);
 
   async function handleLogin() {
