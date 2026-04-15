@@ -2,7 +2,7 @@ services:
   - type: web
     name: workshift-api
     runtime: docker
-    dockerfilePath: ./backend/WorkShift.Api/Dockerfile
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     plan: free
     envVars:
