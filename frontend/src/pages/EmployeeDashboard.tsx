@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Profile, ScheduleShift, Schedule } from '../types';
 import WeeklyGrid from '../components/schedule/WeeklyGrid';
 import ConstraintEditor from '../components/constraints/ConstraintEditor';
+import PersonalStats from '../components/employee/PersonalStats';
 
 interface Props { profile: Profile; }
 
@@ -52,6 +53,7 @@ export default function EmployeeDashboard({ profile }: Props) {
         <Tabs value={tab} onChange={(_, v) => setTab(v)} centered>
           <Tab label="המשמרות שלי" />
           <Tab label="הגשת משמרות" />
+          <Tab label="אזור אישי" />
         </Tabs>
       </Box>
       <Box p={3}>
@@ -67,6 +69,7 @@ export default function EmployeeDashboard({ profile }: Props) {
             : <Typography color="text.secondary" textAlign="center" mt={4}>לוח המשמרות טרם פורסם</Typography>
         )}
         {tab === 1 && <ConstraintEditor profile={profile} />}
+        {tab === 2 && <PersonalStats employeeId={profile.id} />}
       </Box>
     </Box>
   );

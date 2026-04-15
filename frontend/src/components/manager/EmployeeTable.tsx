@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import {
   Box, Button, Table, TableBody, TableCell, TableHead, TableRow,
   Paper, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, Select, MenuItem, FormControl, InputLabel, IconButton, Chip, Alert
+  TextField, Select, MenuItem, FormControl, InputLabel, IconButton, Chip, Alert, Typography
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import PersonOffIcon from '@mui/icons-material/PersonOff';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { supabase } from '../../lib/supabase';
 import { Profile, JobRole } from '../../types';
 
@@ -16,12 +17,41 @@ export default function EmployeeTable() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<Profile & { password: string }>>({});
   const [saveError, setSaveError] = useState('');
+  const [monthlyHours, setMonthlyHours] = useState<Record<string, number>>({});
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); loadMonthlyHours(); }, []);
 
   async function load() {
     const { data } = await supabase.from('profiles').select('*').neq('role', 'manager').order('name');
     setEmployees(data ?? []);
+  }
+
+  async function loadMonthlyHours() {
+    const now = new Date();
+    const monthStart = format(startOfMonth(now), 'yyyy-MM-dd');
+    const monthEnd = format(endOfMonth(now), 'yyyy-MM-dd');
+
+    const { data: schedules } = await supabase
+      .from('schedules')
+      .select('id')
+      .eq('status', 'published')
+      .gte('week_start', monthStart)
+      .lte('week_start', monthEnd);
+
+    if (!schedules?.length) return;
+
+    const { data: shifts } = await supabase
+      .from('schedule_shifts')
+      .select('employee_id, hours')
+      .in('schedule_id', schedules.map((s: { id: string }) => s.id))
+      .not('employee_id', 'is', null);
+
+    const map: Record<string, number> = {};
+    (shifts ?? []).forEach((s: { employee_id: string | null; hours: number | null }) => {
+      if (s.employee_id)
+        map[s.employee_id] = (map[s.employee_id] ?? 0) + (s.hours ?? 8);
+    });
+    setMonthlyHours(map);
   }
 
   function openNew() { setEditing({ role: 'employee', is_active: true }); setSaveError(''); setOpen(true); }
@@ -85,7 +115,16 @@ export default function EmployeeTable() {
           <TableBody>
             {employees.map(e => (
               <TableRow key={e.id}>
-                <TableCell>{e.name}</TableCell>
+                <TableCell>
+                  <Box>
+                    <Typography variant="body2">{e.name}</Typography>
+                    {monthlyHours[e.id] !== undefined && (
+                      <Typography variant="caption" color="text.secondary">
+                        {monthlyHours[e.id]} שעות החודש
+                      </Typography>
+                    )}
+                  </Box>
+                </TableCell>
                 <TableCell>{e.job_role ? JOB_ROLE_LABELS[e.job_role] : '—'}</TableCell>
                 <TableCell>
                   <Chip label={e.is_active ? 'פעיל' : 'לא פעיל'}
