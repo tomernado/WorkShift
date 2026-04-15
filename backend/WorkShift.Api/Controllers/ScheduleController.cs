@@ -50,8 +50,8 @@ public class ScheduleController : ControllerBase
             await _db.UpdateShiftAsync(id, req.DayOfWeek ?? 0, req.ShiftType);
         }
 
-        // ShiftSlotPanel: notes / employee swap
-        if (req.EmployeeId != null || req.EmployeeNote != null || req.ShiftNote != null)
+        // ShiftSlotPanel: notes / employee swap / hours
+        if (req.EmployeeId != null || req.EmployeeNote != null || req.ShiftNote != null || req.Hours != null)
         {
             await _db.PatchShiftDetailsAsync(
                 id,
@@ -60,7 +60,8 @@ public class ScheduleController : ControllerBase
                 req.ShiftNote,
                 req.ScheduleId,
                 req.DayOfWeek,
-                req.ShiftType);
+                req.ShiftType,
+                req.Hours);
         }
 
         return Ok();
@@ -83,5 +84,6 @@ public class ScheduleController : ControllerBase
         string? EmployeeId,
         string? EmployeeNote,
         string? ShiftNote,
-        string? ScheduleId);
+        string? ScheduleId,
+        decimal? Hours);
 }

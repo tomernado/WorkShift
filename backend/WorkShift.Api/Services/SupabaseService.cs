@@ -188,13 +188,15 @@ public class SupabaseService
         string? shiftNote,
         string? scheduleId,
         int? dayOfWeek,
-        string? shiftType)
+        string? shiftType,
+        decimal? hours = null)
     {
         // Build partial update for this specific shift row
         var dict = new Dictionary<string, object?>();
         if (employeeId != null)     dict["employee_id"]    = employeeId == "" ? null : (object?)employeeId;
         if (employeeNote != null)   dict["employee_note"]  = employeeNote;
         if (shiftNote != null)      dict["shift_note"]     = shiftNote;
+        if (hours != null)          dict["hours"]          = hours;
 
         if (dict.Count > 0)
         {
