@@ -93,6 +93,15 @@ export default function WeeklyOverridePanel({ weekStart, onSaved }: Props) {
   async function save() {
     setSaving(true); setError(''); setSaved(false);
     try {
+      // Step 1: delete all existing target_date overrides for this week
+      // (prevents duplicate rows since shift_requirements may lack a unique constraint)
+      const { error: delErr } = await supabase
+        .from('shift_requirements')
+        .delete()
+        .in('target_date', weekDates);
+      if (delErr) throw new Error(delErr.message);
+
+      // Step 2: insert fresh override rows for each slot
       const rows = weekDates.flatMap((date, dayIndex) =>
         SHIFTS.map(shift => {
           const slot = getSlot(date, shift);
@@ -105,10 +114,11 @@ export default function WeeklyOverridePanel({ weekStart, onSaved }: Props) {
           };
         })
       );
-      const { error: err } = await supabase
+      const { error: insErr } = await supabase
         .from('shift_requirements')
-        .upsert(rows, { onConflict: 'target_date,shift_type' });
-      if (err) throw new Error(err.message);
+        .insert(rows);
+      if (insErr) throw new Error(insErr.message);
+
       setSaved(true);
       setTimeout(() => { setSaved(false); onSaved(); }, 1500);
     } catch (e: unknown) {

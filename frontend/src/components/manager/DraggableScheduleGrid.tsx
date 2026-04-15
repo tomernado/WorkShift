@@ -109,17 +109,35 @@ export default function DraggableScheduleGrid() {
     const [dayStr, targetShiftType] = result.destination.droppableId.split('__');
     const targetDay = parseInt(dayStr, 10);
 
+    // Optimistic update
     setShifts(prev => prev.map(s =>
       s.id === shiftId
         ? { ...s, day_of_week: targetDay, shift_type: targetShiftType as ShiftType, is_conflict: false, conflict_reason: null }
         : s
     ));
 
-    await fetch(`${apiUrl}/api/schedule/shifts/${shiftId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dayOfWeek: targetDay, shiftType: targetShiftType }),
-    });
+    try {
+      const res = await fetch(`${apiUrl}/api/schedule/shifts/${shiftId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dayOfWeek: targetDay, shiftType: targetShiftType }),
+      });
+      if (!res.ok) throw new Error(`שגיאה ${res.status}`);
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : 'שגיאה בשמירת גרירה');
+    }
+    // Reload from DB to ensure UI reflects actual saved state
+    await loadSchedule();
+  }
+
+  async function resetSchedule() {
+    if (!schedule) return;
+    if (!window.confirm('למחוק את הסידור הנוכחי ולבנות מחדש? פעולה זו בלתי הפיכה.')) return;
+    await supabase.from('schedule_shifts').delete().eq('schedule_id', schedule.id);
+    await supabase.from('schedules').delete().eq('id', schedule.id);
+    setSchedule(null);
+    setShifts([]);
+    setMsg('הסידור נמחק — ניתן לערוך את הדגשים ולייצר מחדש');
   }
 
   function getCellShifts(day: number, type: ShiftType) {
@@ -227,6 +245,12 @@ export default function DraggableScheduleGrid() {
         )}
 
         {schedule && (
+          <Button variant="outlined" color="error" size="small" onClick={resetSchedule}>
+            אפס סידור
+          </Button>
+        )}
+
+        {schedule && (
           <Chip
             label={schedule.status === 'published' ? 'מפורסם' : 'טיוטה'}
             color={schedule.status === 'published' ? 'success' : 'warning'}
@@ -237,12 +261,7 @@ export default function DraggableScheduleGrid() {
 
       {msg && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setMsg('')}>{msg}</Alert>}
 
-      {schedule && (
-        <Typography variant="caption" color="text.secondary" display="block" mb={1}>
-          לחץ על תא לעריכה · גרור chip להזזת משמרת
-        </Typography>
-      )}
-
+      {/* Override panel — shown when no schedule (before generate) */}
       {!schedule && !generating && (
         <>
           <WeeklyOverridePanel weekStart={weekStart} onSaved={() => {}} />
@@ -250,6 +269,12 @@ export default function DraggableScheduleGrid() {
             לאחר הגדרת הדגשים לחץ על "ייצר לוח"
           </Typography>
         </>
+      )}
+
+      {schedule && (
+        <Typography variant="caption" color="text.secondary" display="block" mb={1}>
+          לחץ על תא לעריכה · גרור chip להזזת משמרת · "אפס סידור" למחיקה וייצור מחדש
+        </Typography>
       )}
 
       {schedule && (

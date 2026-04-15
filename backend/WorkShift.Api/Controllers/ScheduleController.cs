@@ -44,15 +44,21 @@ public class ScheduleController : ControllerBase
         if (string.IsNullOrWhiteSpace(id))
             return BadRequest(new { error = "shift id is required" });
 
-        // Drag-and-drop: dayOfWeek + shiftType present
-        if (req.ShiftType != null)
+        // Detect which operation this is.
+        // Panel edits always include at least one of: EmployeeNote, ShiftNote, Hours.
+        // Drag-drop sends ONLY DayOfWeek + ShiftType.
+        bool isPanelEdit = req.EmployeeId != null || req.EmployeeNote != null
+                           || req.ShiftNote != null || req.Hours != null;
+
+        if (req.ShiftType != null && !isPanelEdit)
         {
+            // Pure drag-and-drop: move the shift to a new slot
             await _db.UpdateShiftAsync(id, req.DayOfWeek ?? 0, req.ShiftType);
         }
 
-        // ShiftSlotPanel: notes / employee swap / hours
-        if (req.EmployeeId != null || req.EmployeeNote != null || req.ShiftNote != null || req.Hours != null)
+        if (isPanelEdit)
         {
+            // ShiftSlotPanel: notes / employee swap / hours
             await _db.PatchShiftDetailsAsync(
                 id,
                 req.EmployeeId,

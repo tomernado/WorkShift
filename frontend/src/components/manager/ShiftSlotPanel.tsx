@@ -58,6 +58,7 @@ export default function ShiftSlotPanel({ open, scheduleId, day, shiftType, shift
   const [shiftNote, setShiftNote] = useState(shifts[0]?.shift_note ?? '');
   const [swappingId, setSwappingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   function getEmpId(shift: ScheduleShift) {
     return empOverrides[shift.id] ?? shift.employee_id ?? '';
@@ -65,27 +66,39 @@ export default function ShiftSlotPanel({ open, scheduleId, day, shiftType, shift
 
   async function save() {
     setSaving(true);
-    for (const shift of shifts) {
-      const body: Record<string, unknown> = {
-        employeeNote: empNotes[shift.id] ?? '',
-        shiftNote,
-        scheduleId,
-        dayOfWeek: day,
-        shiftType,
-        hours: hoursOverrides[shift.id] ?? shift.hours ?? 8,
-      };
-      const overrideEmp = empOverrides[shift.id];
-      if (overrideEmp !== undefined) body.employeeId = overrideEmp;
+    setSaveError('');
+    try {
+      for (const shift of shifts) {
+        const body: Record<string, unknown> = {
+          employeeNote: empNotes[shift.id] ?? '',
+          shiftNote,
+          scheduleId,
+          dayOfWeek: day,
+          shiftType,
+        };
+        // Only send hours if the user explicitly changed it
+        const overrideHours = hoursOverrides[shift.id];
+        if (overrideHours !== undefined) body.hours = overrideHours;
 
-      await fetch(`${apiUrl}/api/schedule/shifts/${shift.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+        const overrideEmp = empOverrides[shift.id];
+        if (overrideEmp !== undefined) body.employeeId = overrideEmp;
+
+        const res = await fetch(`${apiUrl}/api/schedule/shifts/${shift.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          const text = await res.text().catch(() => `שגיאה ${res.status}`);
+          throw new Error(text || `שגיאה ${res.status}`);
+        }
+      }
+      onSaved();
+      onClose();
+    } catch (e: unknown) {
+      setSaveError(e instanceof Error ? e.message : 'שגיאה בשמירה');
     }
     setSaving(false);
-    onSaved();
-    onClose();
   }
 
   // Group shifts by job role
@@ -238,6 +251,11 @@ export default function ShiftSlotPanel({ open, scheduleId, day, shiftType, shift
         />
       </DialogContent>
 
+      {saveError && (
+        <Box px={3} pb={1}>
+          <Alert severity="error" onClose={() => setSaveError('')}>{saveError}</Alert>
+        </Box>
+      )}
       <DialogActions>
         <Button onClick={onClose}>ביטול</Button>
         <Button variant="contained" onClick={save} disabled={saving}>
