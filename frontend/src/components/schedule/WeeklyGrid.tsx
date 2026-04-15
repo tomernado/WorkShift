@@ -37,13 +37,20 @@ export default function WeeklyGrid({ shifts, employees, currentEmployeeId }: Pro
       const emp = s.employee_id ? empMap[s.employee_id] : null;
       const isMe = s.employee_id === currentEmployeeId;
       return (
-        <Chip
-          key={s.id}
-          label={emp?.name ?? '—'}
-          size="small"
-          color={isMe ? 'primary' : 'default'}
-          sx={{ m: 0.25, opacity: s.employee_id ? 1 : 0.4, fontSize: 11 }}
-        />
+        <Box key={s.id} sx={{ display: 'inline-block', mb: s.employee_note ? 0.25 : 0 }}>
+          <Chip
+            label={emp?.name ?? '—'}
+            size="small"
+            color={isMe ? 'primary' : 'default'}
+            sx={{ m: 0.25, opacity: s.employee_id ? 1 : 0.4, fontSize: 11 }}
+          />
+          {s.employee_note && (
+            <Typography variant="caption" display="block"
+              sx={{ fontSize: 9.5, color: 'primary.main', px: 0.5, lineHeight: 1.3, whiteSpace: 'pre-wrap', maxWidth: 110 }}>
+              💬 {s.employee_note}
+            </Typography>
+          )}
+        </Box>
       );
     }
 
@@ -65,11 +72,6 @@ export default function WeeklyGrid({ shifts, employees, currentEmployeeId }: Pro
         {shiftNote && (
           <Typography variant="caption" color="text.secondary" display="block" sx={{ fontSize: 9, mt: 0.25, fontStyle: 'italic' }}>
             📝 {shiftNote}
-          </Typography>
-        )}
-        {myShift?.employee_note && (
-          <Typography variant="caption" color="primary" display="block" sx={{ fontSize: 9, mt: 0.25 }}>
-            💬 {myShift.employee_note}
           </Typography>
         )}
       </Box>

@@ -158,18 +158,21 @@ export default function DraggableScheduleGrid() {
       return (
         <Draggable key={s.id} draggableId={s.id} index={idx} isDragDisabled={false}>
           {(drag) => (
-            <Tooltip title={s.conflict_reason ?? (s.employee_note ? `הערה: ${s.employee_note}` : '')}
-              disableHoverListener={!s.is_conflict && !s.employee_note}>
+            <Box ref={drag.innerRef} {...drag.draggableProps} {...drag.dragHandleProps}
+              sx={{ display: 'inline-block', mb: s.employee_note ? 0.25 : 0 }}>
               <Chip
-                ref={drag.innerRef}
-                {...drag.draggableProps}
-                {...drag.dragHandleProps}
                 label={emp?.name ?? '⚠ חסר'}
                 size="small"
                 color={s.is_conflict ? 'warning' : 'default'}
-                sx={{ m: 0.2, cursor: 'grab', fontSize: 11, maxWidth: 90 }}
+                sx={{ m: 0.2, cursor: 'grab', fontSize: 11, maxWidth: 100 }}
               />
-            </Tooltip>
+              {s.employee_note && (
+                <Typography variant="caption" display="block"
+                  sx={{ fontSize: 9.5, color: 'primary.main', px: 0.5, lineHeight: 1.3, whiteSpace: 'pre-wrap', maxWidth: 110 }}>
+                  💬 {s.employee_note}
+                </Typography>
+              )}
+            </Box>
           )}
         </Draggable>
       );

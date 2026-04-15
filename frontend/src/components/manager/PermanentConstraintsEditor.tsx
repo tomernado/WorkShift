@@ -28,6 +28,9 @@ export default function PermanentConstraintsEditor() {
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [selectedId, setSelectedId] = useState('');
   const [constraint, setConstraint] = useState<PermanentConstraint>(DEFAULT);
+  // String-based intermediate state to allow free editing (avoid snap-back on clear)
+  const [minStr, setMinStr] = useState('0');
+  const [maxStr, setMaxStr] = useState('5');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -44,14 +47,20 @@ export default function PermanentConstraintsEditor() {
     setLoading(true);
     setSaved(false);
     setError('');
+    setMinStr('0');
+    setMaxStr('5');
     fetch(`${apiUrl}/api/employees/${selectedId}/permanent-constraint`)
       .then(r => r.json())
       .then(data => {
+        const min = data.min_shifts_per_week ?? 0;
+        const max = data.max_shifts_per_week ?? 5;
         setConstraint({
-          min_shifts_per_week: data.min_shifts_per_week ?? 0,
-          max_shifts_per_week: data.max_shifts_per_week ?? 5,
+          min_shifts_per_week: min,
+          max_shifts_per_week: max,
           cannot_work: data.cannot_work ?? [],
         });
+        setMinStr(String(min));
+        setMaxStr(String(max));
       })
       .catch(() => setConstraint(DEFAULT))
       .finally(() => setLoading(false));
@@ -71,11 +80,17 @@ export default function PermanentConstraintsEditor() {
     setSaving(true);
     setError('');
     setSaved(false);
+    // Parse string states into final numbers before saving
+    const parsedMin = parseInt(minStr);
+    const parsedMax = parseInt(maxStr);
+    const finalMin = isNaN(parsedMin) || parsedMin < 0 ? 0 : parsedMin;
+    const finalMax = isNaN(parsedMax) || parsedMax < 1 ? 1 : parsedMax;
+    const payload = { ...constraint, min_shifts_per_week: finalMin, max_shifts_per_week: finalMax };
     try {
       const res = await fetch(`${apiUrl}/api/employees/${selectedId}/permanent-constraint`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(constraint),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error(await res.text());
       setSaved(true);
@@ -120,12 +135,8 @@ export default function PermanentConstraintsEditor() {
                 label="מינימום משמרות"
                 type="number"
                 size="small"
-                value={constraint.min_shifts_per_week}
-                onChange={e => {
-                  const v = parseInt(e.target.value);
-                  if (!isNaN(v) && v >= 0) setConstraint(p => ({ ...p, min_shifts_per_week: v }));
-                  else if (e.target.value === '') setConstraint(p => ({ ...p, min_shifts_per_week: 0 }));
-                }}
+                value={minStr}
+                onChange={e => setMinStr(e.target.value)}
                 helperText="העובד יקבל עדיפות לקבל לפחות כמה משמרות"
                 sx={{ width: 180 }}
                 slotProps={{ htmlInput: { min: 0 } }}
@@ -134,12 +145,8 @@ export default function PermanentConstraintsEditor() {
                 label="מקסימום משמרות"
                 type="number"
                 size="small"
-                value={constraint.max_shifts_per_week}
-                onChange={e => {
-                  const v = parseInt(e.target.value);
-                  if (!isNaN(v) && v >= 1) setConstraint(p => ({ ...p, max_shifts_per_week: v }));
-                  else if (e.target.value === '') setConstraint(p => ({ ...p, max_shifts_per_week: 1 }));
-                }}
+                value={maxStr}
+                onChange={e => setMaxStr(e.target.value)}
                 helperText="העובד לא יקבל יותר ממספר זה"
                 sx={{ width: 180 }}
                 slotProps={{ htmlInput: { min: 1 } }}
