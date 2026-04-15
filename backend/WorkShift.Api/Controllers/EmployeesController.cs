@@ -28,8 +28,15 @@ public class EmployeesController : ControllerBase
         if (string.IsNullOrWhiteSpace(req.Password) || req.Password.Length < 4)
             return BadRequest(new { error = "password must be at least 4 characters" });
 
-        await _db.UpdateEmployeePasswordAsync(id, req.Password);
-        return NoContent();
+        try
+        {
+            await _db.UpdateEmployeePasswordAsync(id, req.Password);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { error = ex.Message });
+        }
     }
 
     public record CreateEmployeeRequest(string Name, string JobRole);
