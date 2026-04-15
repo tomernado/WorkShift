@@ -54,7 +54,10 @@ export default function ShiftSlotPanel({ open, scheduleId, day, shiftType, shift
   const [empNotes, setEmpNotes] = useState<Record<string, string>>(() =>
     Object.fromEntries(shifts.map(s => [s.id, s.employee_note ?? '']))
   );
-  const [hoursOverrides, setHoursOverrides] = useState<Record<string, number>>({});
+  // Store hours as raw string so the input is freely editable (no snap-back on clear)
+  const [hoursStr, setHoursStr] = useState<Record<string, string>>(() =>
+    Object.fromEntries(shifts.map(s => [s.id, String(s.hours ?? 8)]))
+  );
   const [shiftNote, setShiftNote] = useState(shifts[0]?.shift_note ?? '');
   const [swappingId, setSwappingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -76,9 +79,9 @@ export default function ShiftSlotPanel({ open, scheduleId, day, shiftType, shift
           dayOfWeek: day,
           shiftType,
         };
-        // Only send hours if the user explicitly changed it
-        const overrideHours = hoursOverrides[shift.id];
-        if (overrideHours !== undefined) body.hours = overrideHours;
+        // Parse hours from the raw string — always send to keep DB in sync
+        const parsedHours = parseFloat(hoursStr[shift.id] ?? '8');
+        body.hours = isNaN(parsedHours) || parsedHours < 0.5 ? 8 : parsedHours;
 
         const overrideEmp = empOverrides[shift.id];
         if (overrideEmp !== undefined) body.employeeId = overrideEmp;
@@ -195,8 +198,8 @@ export default function ShiftSlotPanel({ open, scheduleId, day, shiftType, shift
             size="small"
             label="שעות"
             type="number"
-            value={hoursOverrides[shift.id] ?? shift.hours ?? 8}
-            onChange={e => setHoursOverrides(p => ({ ...p, [shift.id]: parseFloat(e.target.value) || 8 }))}
+            value={hoursStr[shift.id] ?? '8'}
+            onChange={e => setHoursStr(p => ({ ...p, [shift.id]: e.target.value }))}
             sx={{ width: 85, flexShrink: 0 }}
             slotProps={{ htmlInput: { min: 1, max: 12, step: 0.5 } }}
           />
