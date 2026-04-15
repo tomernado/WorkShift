@@ -9,6 +9,7 @@ import { format, startOfWeek, addDays } from 'date-fns';
 import { supabase } from '../../lib/supabase';
 import { Profile, ScheduleShift, Schedule, ParsedConstraint, DAY_NAMES, SHIFT_LABELS, ShiftType } from '../../types';
 import ShiftSlotPanel from './ShiftSlotPanel';
+import WeeklyOverridePanel from './WeeklyOverridePanel';
 
 const apiUrl = import.meta.env.VITE_API_URL as string;
 const SHIFTS: ShiftType[] = ['morning', 'evening'];
@@ -243,9 +244,12 @@ export default function DraggableScheduleGrid() {
       )}
 
       {!schedule && !generating && (
-        <Typography color="text.secondary" textAlign="center" mt={4}>
-          לחץ על "ייצר לוח" כדי להתחיל
-        </Typography>
+        <>
+          <WeeklyOverridePanel weekStart={weekStart} onSaved={() => {}} />
+          <Typography color="text.secondary" textAlign="center">
+            לאחר הגדרת הדגשים לחץ על "ייצר לוח"
+          </Typography>
+        </>
       )}
 
       {schedule && (
