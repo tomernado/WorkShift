@@ -7,6 +7,7 @@ import ShiftRequirementsGrid from '../components/manager/ShiftRequirementsGrid';
 import DraggableScheduleGrid from '../components/manager/DraggableScheduleGrid';
 import ConstraintsOverview from '../components/manager/ConstraintsOverview';
 import AnnouncementEditor from '../components/manager/AnnouncementEditor';
+import PermanentConstraintsEditor from '../components/manager/PermanentConstraintsEditor';
 
 interface Props { profile: Profile; }
 
@@ -26,6 +27,7 @@ export default function ManagerDashboard({ profile }: Props) {
           <Tab label="עובדים" />
           <Tab label="דרישות משמרת" />
           <Tab label="אילוצי עובדים" />
+          <Tab label="אילוצים קבועים" />
           <Tab label="לוח משמרות" />
           <Tab label="הודעות" />
         </Tabs>
@@ -34,8 +36,9 @@ export default function ManagerDashboard({ profile }: Props) {
         {tab === 0 && <EmployeeTable />}
         {tab === 1 && <ShiftRequirementsGrid />}
         {tab === 2 && <ConstraintsOverview />}
-        {tab === 3 && <DraggableScheduleGrid />}
-        {tab === 4 && <AnnouncementEditor />}
+        {tab === 3 && <PermanentConstraintsEditor />}
+        {tab === 4 && <DraggableScheduleGrid />}
+        {tab === 5 && <AnnouncementEditor />}
       </Box>
     </Box>
   );

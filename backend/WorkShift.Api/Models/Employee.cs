@@ -6,4 +6,5 @@ public record Employee
     public string Name { get; init; } = "";
     public string JobRole { get; init; } = "";   // "waiter" | "cook"
     public bool IsActive { get; init; } = true;
+    public PermanentConstraint? PermanentConstraint { get; init; }
 }

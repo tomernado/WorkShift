@@ -34,7 +34,7 @@ public class SupabaseService
 
     public async Task<List<Employee>> GetActiveEmployeesAsync()
     {
-        var url = $"{_baseUrl}/rest/v1/profiles?role=neq.manager&is_active=eq.true&select=id,name,job_role,is_active";
+        var url = $"{_baseUrl}/rest/v1/profiles?role=neq.manager&is_active=eq.true&select=id,name,job_role,is_active,permanent_constraint";
         var json = await _http.GetStringAsync(url);
         var rows = JsonSerializer.Deserialize<List<JsonElement>>(json, JsonOpts) ?? [];
         return rows.Select(r => new Employee
@@ -44,8 +44,35 @@ public class SupabaseService
             JobRole = r.TryGetProperty("job_role", out var jr) && jr.ValueKind != JsonValueKind.Null
                 ? jr.GetString() ?? ""
                 : "",
-            IsActive = r.GetProperty("is_active").GetBoolean()
+            IsActive = r.GetProperty("is_active").GetBoolean(),
+            PermanentConstraint = r.TryGetProperty("permanent_constraint", out var pc) && pc.ValueKind != JsonValueKind.Null
+                ? JsonSerializer.Deserialize<PermanentConstraint>(pc.GetRawText(), JsonOpts)
+                : null
         }).ToList();
+    }
+
+    public async Task<PermanentConstraint?> GetPermanentConstraintAsync(string employeeId)
+    {
+        var url = $"{_baseUrl}/rest/v1/profiles?id=eq.{employeeId}&select=permanent_constraint";
+        var json = await _http.GetStringAsync(url);
+        var rows = JsonSerializer.Deserialize<List<JsonElement>>(json, JsonOpts) ?? [];
+        if (rows.Count == 0) return null;
+        var pc = rows[0].TryGetProperty("permanent_constraint", out var val) && val.ValueKind != JsonValueKind.Null
+            ? JsonSerializer.Deserialize<PermanentConstraint>(val.GetRawText(), JsonOpts)
+            : null;
+        return pc;
+    }
+
+    public async Task SavePermanentConstraintAsync(string employeeId, PermanentConstraint constraint)
+    {
+        var url = $"{_baseUrl}/rest/v1/profiles?id=eq.{employeeId}";
+        var body = JsonSerializer.Serialize(new { permanent_constraint = constraint });
+        var req = new HttpRequestMessage(HttpMethod.Patch, url)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        };
+        var resp = await _http.SendAsync(req);
+        resp.EnsureSuccessStatusCode();
     }
 
     public async Task<List<ShiftRequirement>> GetShiftRequirementsAsync()

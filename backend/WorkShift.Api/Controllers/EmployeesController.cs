@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using WorkShift.Api.Models;
 using WorkShift.Api.Services;
 
 namespace WorkShift.Api.Controllers;
@@ -37,6 +38,20 @@ public class EmployeesController : ControllerBase
         {
             return StatusCode(500, new { error = ex.Message });
         }
+    }
+
+    [HttpGet("{id}/permanent-constraint")]
+    public async Task<IActionResult> GetPermanentConstraint(string id)
+    {
+        var constraint = await _db.GetPermanentConstraintAsync(id);
+        return Ok(constraint ?? new PermanentConstraint());
+    }
+
+    [HttpPut("{id}/permanent-constraint")]
+    public async Task<IActionResult> SavePermanentConstraint(string id, [FromBody] PermanentConstraint constraint)
+    {
+        await _db.SavePermanentConstraintAsync(id, constraint);
+        return NoContent();
     }
 
     public record CreateEmployeeRequest(string Name, string JobRole);
