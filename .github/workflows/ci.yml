@@ -7,12 +7,9 @@ on:
     branches: [main]
 
 jobs:
-  backend:
-    name: Backend — Build & Test
+  build-and-test:
+    name: Build & Test
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend/WorkShift.Api
 
     steps:
       - uses: actions/checkout@v4
@@ -22,30 +19,16 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --no-restore -c Release
-
-      - name: Test
-        working-directory: backend
-        run: dotnet test --no-build -c Release --verbosity normal
-        continue-on-error: true
-
-      - name: Docker build check
-        run: docker build -t workshift-api .
+      - name: Backend — Restore & Build
         working-directory: backend/WorkShift.Api
+        run: |
+          dotnet restore
+          dotnet build --no-restore -c Release
 
-  frontend:
-    name: Frontend — Type-check & Build
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-
-    steps:
-      - uses: actions/checkout@v4
+      - name: Backend — Test
+        working-directory: backend
+        run: dotnet test -c Release --verbosity normal
+        continue-on-error: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -54,15 +37,22 @@ jobs:
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Install
+      - name: Frontend — Install
+        working-directory: frontend
         run: npm ci
 
-      - name: Type-check
-        run: npx tsc --noEmit
-
-      - name: Build
+      - name: Frontend — Type-check & Build
+        working-directory: frontend
         run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_URL: ""
+
+      - name: Docker build check (full stack)
+        run: |
+          docker build \
+            --build-arg VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }} \
+            --build-arg VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }} \
+            -f backend/WorkShift.Api/Dockerfile \
+            -t workshift .

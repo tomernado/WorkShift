@@ -16,4 +16,9 @@ builder.Services.AddSingleton<SupabaseService>();
 var app = builder.Build();
 app.UseCors();
 app.MapControllers();
+
+app.UseDefaultFiles();
+app.UseStaticFiles();
+app.MapFallbackToFile("index.html");
+
 app.Run();
