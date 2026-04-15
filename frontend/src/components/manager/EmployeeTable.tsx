@@ -15,6 +15,7 @@ export default function EmployeeTable() {
   const [employees, setEmployees] = useState<Profile[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<Profile & { password: string }>>({});
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => { load(); }, []);
 
@@ -23,10 +24,12 @@ export default function EmployeeTable() {
     setEmployees(data ?? []);
   }
 
-  function openNew() { setEditing({ role: 'employee', is_active: true }); setOpen(true); }
-  function openEdit(e: Profile) { setEditing(e); setOpen(true); }
+  function openNew() { setEditing({ role: 'employee', is_active: true }); setSaveError(''); setOpen(true); }
+  function openEdit(e: Profile) { setEditing(e); setSaveError(''); setOpen(true); }
 
   async function save() {
+    setSaveError('');
+    const apiUrl = (import.meta.env.VITE_API_URL as string) || '';
     if (editing.id) {
       await supabase.from('profiles').update({
         name: editing.name,
@@ -34,22 +37,26 @@ export default function EmployeeTable() {
         is_active: editing.is_active,
       }).eq('id', editing.id);
       if (editing.password && editing.password.length >= 4) {
-        const apiUrl = import.meta.env.VITE_API_URL as string;
-        await fetch(`${apiUrl}/api/employees/${editing.id}/password`, {
+        const res = await fetch(`${apiUrl}/api/employees/${editing.id}/password`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ password: editing.password }),
         });
+        if (!res.ok) {
+          const errText = await res.text();
+          setSaveError(`שגיאה בשינוי קוד: ${errText}`);
+          return;
+        }
       }
     } else {
-      const apiUrl = import.meta.env.VITE_API_URL as string;
       const res = await fetch(`${apiUrl}/api/employees`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: editing.name, jobRole: editing.job_role }),
       });
       if (!res.ok) {
-        console.error('Create employee failed:', await res.text());
+        const errText = await res.text();
+        setSaveError(`שגיאה ביצירת עובד: ${errText}`);
         return;
       }
     }
@@ -99,6 +106,7 @@ export default function EmployeeTable() {
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="xs">
         <DialogTitle>{editing.id ? 'עריכת עובד' : 'הוספת עובד'}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: '16px !important' }}>
+          {saveError && <Alert severity="error">{saveError}</Alert>}
           <TextField
             label="שם" value={editing.name ?? ''}
             onChange={e => setEditing(p => ({ ...p, name: e.target.value }))}
