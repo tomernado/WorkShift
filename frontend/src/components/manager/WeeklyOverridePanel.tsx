@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Box, Typography, Paper, Table, TableHead, TableBody,
   TableRow, TableCell, TextField, Switch, FormControlLabel,
-  Button, CircularProgress, Alert,
+  Button, CircularProgress, Alert, useTheme, useMediaQuery,
 } from '@mui/material';
 import { supabase } from '../../lib/supabase';
 import { DAY_NAMES, ShiftType, SHIFT_LABELS } from '../../types';
@@ -24,6 +24,9 @@ interface Props {
 }
 
 export default function WeeklyOverridePanel({ weekStart, onSaved }: Props) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
   const [defaults, setDefaults] = useState<Record<string, { waiters: number; cooks: number }>>({});
   const [overrides, setOverrides] = useState<OverrideGrid>({});
   const [saving, setSaving] = useState(false);
@@ -123,69 +126,129 @@ export default function WeeklyOverridePanel({ weekStart, onSaved }: Props) {
         שינויים כאן חלים על שבוע זה בלבד ולא משנים את ברירת המחדל הקבועה
       </Typography>
 
-      <Box sx={{ overflowX: 'auto' }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow sx={{ bgcolor: 'primary.main' }}>
-              <TableCell sx={{ color: 'white', fontWeight: 700, width: 60 }} />
-              {DAY_NAMES.map((d, i) => (
-                <TableCell key={i} align="center" sx={{ color: 'white', fontWeight: 700 }}>{d}</TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {SHIFTS.map(shift => (
-              <TableRow key={shift}>
-                <TableCell sx={{ fontWeight: 600 }}>{SHIFT_LABELS[shift]}</TableCell>
-                {weekDates.map((date, dayIndex) => {
-                  const slot = getSlot(date, shift);
-                  return (
-                    <TableCell key={dayIndex} sx={{ p: 0.5, minWidth: 110, verticalAlign: 'top' }}>
-                      <Box sx={{
-                        p: 1, borderRadius: 1,
-                        bgcolor: slot.closed ? '#fff3e0' : 'grey.50',
-                        border: '1px solid',
-                        borderColor: slot.closed ? 'warning.light' : 'divider',
-                      }}>
-                        <FormControlLabel
-                          control={
-                            <Switch
-                              size="small"
-                              checked={slot.closed}
-                              onChange={e => setSlot(date, shift, { closed: e.target.checked })}
-                              color="warning"
-                            />
-                          }
-                          label={<Typography variant="caption">{slot.closed ? 'סגור' : 'פתוח'}</Typography>}
-                          sx={{ mb: slot.closed ? 0 : 0.5, ml: 0, mr: 0 }}
-                        />
-                        {!slot.closed && (
-                          <Box display="flex" gap={0.5} mt={0.5}>
-                            <TextField
-                              label="מלצרים" type="number" size="small"
-                              value={slot.waiters}
-                              onChange={e => setSlot(date, shift, { waiters: parseInt(e.target.value) || 0 })}
-                              sx={{ width: 58 }}
-                              slotProps={{ htmlInput: { min: 0, max: 10, style: { padding: '4px 6px', fontSize: 12 } } }}
-                            />
-                            <TextField
-                              label="טבחים" type="number" size="small"
-                              value={slot.cooks}
-                              onChange={e => setSlot(date, shift, { cooks: parseInt(e.target.value) || 0 })}
-                              sx={{ width: 58 }}
-                              slotProps={{ htmlInput: { min: 0, max: 10, style: { padding: '4px 6px', fontSize: 12 } } }}
-                            />
-                          </Box>
-                        )}
-                      </Box>
-                    </TableCell>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Box>
+      <Table size="small" sx={{ overflowX: isMobile ? 'visible' : 'auto' }}>
+        <TableHead>
+          <TableRow sx={{ bgcolor: 'primary.main' }}>
+            <TableCell sx={{ color: 'white', fontWeight: 700, width: isMobile ? 56 : 60 }} />
+            {isMobile
+              ? SHIFTS.map(s => (
+                  <TableCell key={s} align="center" sx={{ color: 'white', fontWeight: 700 }}>
+                    {SHIFT_LABELS[s]}
+                  </TableCell>
+                ))
+              : DAY_NAMES.map((d, i) => (
+                  <TableCell key={i} align="center" sx={{ color: 'white', fontWeight: 700 }}>{d}</TableCell>
+                ))
+            }
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {isMobile
+            // Mobile: rows = days, columns = morning / evening
+            ? weekDates.map((date, dayIndex) => (
+                <TableRow key={date}>
+                  <TableCell sx={{ fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap', verticalAlign: 'top', pt: 1 }}>
+                    {DAY_NAMES[dayIndex]}
+                  </TableCell>
+                  {SHIFTS.map(shift => {
+                    const slot = getSlot(date, shift);
+                    return (
+                      <TableCell key={shift} sx={{ p: 0.5, verticalAlign: 'top' }}>
+                        <Box sx={{
+                          p: 0.75, borderRadius: 1,
+                          bgcolor: slot.closed ? '#fff3e0' : 'grey.50',
+                          border: '1px solid',
+                          borderColor: slot.closed ? 'warning.light' : 'divider',
+                        }}>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                size="small"
+                                checked={slot.closed}
+                                onChange={e => setSlot(date, shift, { closed: e.target.checked })}
+                                color="warning"
+                              />
+                            }
+                            label={<Typography variant="caption">{slot.closed ? 'סגור' : 'פתוח'}</Typography>}
+                            sx={{ ml: 0, mr: 0, mb: slot.closed ? 0 : 0.5 }}
+                          />
+                          {!slot.closed && (
+                            <Box display="flex" gap={0.5} mt={0.25}>
+                              <TextField
+                                label="מלצ'" type="number" size="small"
+                                value={slot.waiters}
+                                onChange={e => setSlot(date, shift, { waiters: parseInt(e.target.value) || 0 })}
+                                sx={{ width: 56 }}
+                                slotProps={{ htmlInput: { min: 0, max: 10, style: { padding: '4px 4px', fontSize: 12 } } }}
+                              />
+                              <TextField
+                                label="טבח'" type="number" size="small"
+                                value={slot.cooks}
+                                onChange={e => setSlot(date, shift, { cooks: parseInt(e.target.value) || 0 })}
+                                sx={{ width: 56 }}
+                                slotProps={{ htmlInput: { min: 0, max: 10, style: { padding: '4px 4px', fontSize: 12 } } }}
+                              />
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))
+            // Desktop: rows = morning/evening, columns = days
+            : SHIFTS.map(shift => (
+                <TableRow key={shift}>
+                  <TableCell sx={{ fontWeight: 600 }}>{SHIFT_LABELS[shift]}</TableCell>
+                  {weekDates.map((date, dayIndex) => {
+                    const slot = getSlot(date, shift);
+                    return (
+                      <TableCell key={dayIndex} sx={{ p: 0.5, minWidth: 110, verticalAlign: 'top' }}>
+                        <Box sx={{
+                          p: 1, borderRadius: 1,
+                          bgcolor: slot.closed ? '#fff3e0' : 'grey.50',
+                          border: '1px solid',
+                          borderColor: slot.closed ? 'warning.light' : 'divider',
+                        }}>
+                          <FormControlLabel
+                            control={
+                              <Switch
+                                size="small"
+                                checked={slot.closed}
+                                onChange={e => setSlot(date, shift, { closed: e.target.checked })}
+                                color="warning"
+                              />
+                            }
+                            label={<Typography variant="caption">{slot.closed ? 'סגור' : 'פתוח'}</Typography>}
+                            sx={{ mb: slot.closed ? 0 : 0.5, ml: 0, mr: 0 }}
+                          />
+                          {!slot.closed && (
+                            <Box display="flex" gap={0.5} mt={0.5}>
+                              <TextField
+                                label="מלצרים" type="number" size="small"
+                                value={slot.waiters}
+                                onChange={e => setSlot(date, shift, { waiters: parseInt(e.target.value) || 0 })}
+                                sx={{ width: 58 }}
+                                slotProps={{ htmlInput: { min: 0, max: 10, style: { padding: '4px 6px', fontSize: 12 } } }}
+                              />
+                              <TextField
+                                label="טבחים" type="number" size="small"
+                                value={slot.cooks}
+                                onChange={e => setSlot(date, shift, { cooks: parseInt(e.target.value) || 0 })}
+                                sx={{ width: 58 }}
+                                slotProps={{ htmlInput: { min: 0, max: 10, style: { padding: '4px 6px', fontSize: 12 } } }}
+                              />
+                            </Box>
+                          )}
+                        </Box>
+                      </TableCell>
+                    );
+                  })}
+                </TableRow>
+              ))
+          }
+        </TableBody>
+      </Table>
 
       {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
       {saved && <Alert severity="success" sx={{ mt: 2 }}>✓ נשמר</Alert>}
