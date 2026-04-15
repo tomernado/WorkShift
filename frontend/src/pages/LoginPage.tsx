@@ -30,7 +30,9 @@ export default function LoginPage() {
   return (
     <div className="login-root">
       <div className="login-card">
-        <div className="logo-ring">⏱</div>
+        <div className="logo-wrap">
+          <div className="logo-icon">📅</div>
+        </div>
 
         <h1 className="brand-name">WorkShift</h1>
         <p className="brand-sub">ניהול משמרות</p>
