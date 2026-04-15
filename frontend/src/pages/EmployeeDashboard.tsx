@@ -19,16 +19,21 @@ export default function EmployeeDashboard({ profile }: Props) {
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [shifts, setShifts] = useState<ScheduleShift[]>([]);
   const [employees, setEmployees] = useState<Profile[]>([]);
+  const [announcement, setAnnouncement] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.from('profiles').select('*').eq('is_active', true)
       .then(({ data }) => setEmployees(data ?? []));
 
-    supabase.from('schedules').select('*')
-      .eq('week_start', getWeekStart()).eq('status', 'published').single()
+    // Load announcement from any schedule this week (draft or published)
+    supabase.from('schedules').select('id,announcement,status')
+      .eq('week_start', getWeekStart())
+      .maybeSingle()
       .then(({ data }) => {
-        setSchedule(data ?? null);
-        if (data) {
+        if (data?.announcement) setAnnouncement(data.announcement);
+        // Only show shifts if published
+        if (data?.status === 'published') {
+          setSchedule(data as Schedule);
           supabase.from('schedule_shifts').select('*').eq('schedule_id', data.id)
             .then(({ data: s }) => setShifts(s ?? []));
         }
@@ -50,10 +55,10 @@ export default function EmployeeDashboard({ profile }: Props) {
         </Tabs>
       </Box>
       <Box p={3}>
-        {schedule?.announcement && (
+        {announcement && (
           <Alert severity="info" sx={{ mb: 2, fontWeight: 500 }}>
             <Typography variant="body2" fontWeight={700} gutterBottom>הודעה מהמנהל:</Typography>
-            <Typography variant="body2">{schedule.announcement}</Typography>
+            <Typography variant="body2">{announcement}</Typography>
           </Alert>
         )}
         {tab === 0 && (
