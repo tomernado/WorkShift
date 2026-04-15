@@ -57,6 +57,7 @@ export interface ScheduleShift {
   conflict_reason: string | null;
   employee_note: string | null;
   shift_note: string | null;
+  hours?: number;
   profile?: Profile;
 }
 

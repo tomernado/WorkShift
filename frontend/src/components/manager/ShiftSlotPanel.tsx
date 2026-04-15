@@ -49,11 +49,12 @@ const JOB_LABELS: Record<string, string> = { waiter: 'מלצר', cook: 'טבח' 
 export default function ShiftSlotPanel({ open, scheduleId, day, shiftType, shifts, employees, constraints, onClose, onSaved }: Props) {
   const empMap = Object.fromEntries(employees.map(e => [e.id, e]));
 
-  // Local state per shift-row: employee_id overrides + notes
+  // Local state per shift-row: employee_id overrides + notes + hours
   const [empOverrides, setEmpOverrides] = useState<Record<string, string>>({});
   const [empNotes, setEmpNotes] = useState<Record<string, string>>(() =>
     Object.fromEntries(shifts.map(s => [s.id, s.employee_note ?? '']))
   );
+  const [hoursOverrides, setHoursOverrides] = useState<Record<string, number>>({});
   const [shiftNote, setShiftNote] = useState(shifts[0]?.shift_note ?? '');
   const [swappingId, setSwappingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -71,6 +72,7 @@ export default function ShiftSlotPanel({ open, scheduleId, day, shiftType, shift
         scheduleId,
         dayOfWeek: day,
         shiftType,
+        hours: hoursOverrides[shift.id] ?? shift.hours ?? 8,
       };
       const overrideEmp = empOverrides[shift.id];
       if (overrideEmp !== undefined) body.employeeId = overrideEmp;
@@ -167,15 +169,25 @@ export default function ShiftSlotPanel({ open, scheduleId, day, shiftType, shift
           </Box>
         )}
 
-        <TextField
-          size="small"
-          fullWidth
-          label="הערה לעובד"
-          value={empNotes[shift.id] ?? ''}
-          onChange={e => setEmpNotes(p => ({ ...p, [shift.id]: e.target.value }))}
-          sx={{ mt: 0.75 }}
-          inputProps={{ maxLength: 200 }}
-        />
+        <Box display="flex" gap={1} mt={0.75} alignItems="flex-start">
+          <TextField
+            size="small"
+            fullWidth
+            label="הערה לעובד"
+            value={empNotes[shift.id] ?? ''}
+            onChange={e => setEmpNotes(p => ({ ...p, [shift.id]: e.target.value }))}
+            inputProps={{ maxLength: 200 }}
+          />
+          <TextField
+            size="small"
+            label="שעות"
+            type="number"
+            value={hoursOverrides[shift.id] ?? shift.hours ?? 8}
+            onChange={e => setHoursOverrides(p => ({ ...p, [shift.id]: parseFloat(e.target.value) || 8 }))}
+            sx={{ width: 85, flexShrink: 0 }}
+            slotProps={{ htmlInput: { min: 1, max: 12, step: 0.5 } }}
+          />
+        </Box>
       </Box>
     );
   }
