@@ -56,7 +56,7 @@ export default function ConstraintsOverview() {
   useEffect(() => {
     supabase.from('profiles').select('id,name,job_role,is_active')
       .eq('is_active', true).neq('role', 'manager').order('name')
-      .then(({ data }) => setEmployees(data ?? []));
+      .then(({ data }) => setEmployees((data ?? []) as Profile[]));
   }, []);
 
   useEffect(() => {

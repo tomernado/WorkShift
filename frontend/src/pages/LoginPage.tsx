@@ -15,7 +15,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     supabase.from('profiles').select('id,name,role,email').eq('is_active', true)
-      .then(({ data }) => setEmployees(data ?? []));
+      .then(({ data }) => setEmployees((data ?? []) as Profile[]));
   }, []);
 
   async function handleLogin() {

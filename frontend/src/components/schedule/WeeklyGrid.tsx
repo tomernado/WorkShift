@@ -1,5 +1,5 @@
 import {
-  Box, Paper, Typography, Chip,
+  Paper, Typography, Chip,
   Table, TableHead, TableBody, TableRow, TableCell,
   useMediaQuery, useTheme,
 } from '@mui/material';
