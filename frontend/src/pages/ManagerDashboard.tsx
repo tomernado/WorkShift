@@ -22,7 +22,7 @@ export default function ManagerDashboard({ profile }: Props) {
         </Toolbar>
       </AppBar>
       <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-        <Tabs value={tab} onChange={(_, v) => setTab(v)} centered variant="scrollable" scrollButtons="auto">
+        <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
           <Tab label="עובדים" />
           <Tab label="דרישות משמרת" />
           <Tab label="אילוצי עובדים" />
