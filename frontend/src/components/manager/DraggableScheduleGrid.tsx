@@ -137,7 +137,7 @@ export default function DraggableScheduleGrid() {
     function renderChip(s: ScheduleShift, idx: number) {
       const emp = s.employee_id ? empMap[s.employee_id] : null;
       return (
-        <Draggable key={s.id} draggableId={s.id} index={idx} isDragDisabled={!isDraft}>
+        <Draggable key={s.id} draggableId={s.id} index={idx} isDragDisabled={false}>
           {(drag) => (
             <Tooltip title={s.conflict_reason ?? (s.employee_note ? `הערה: ${s.employee_note}` : '')}
               disableHoverListener={!s.is_conflict && !s.employee_note}>
@@ -148,7 +148,7 @@ export default function DraggableScheduleGrid() {
                 label={emp?.name ?? '⚠ חסר'}
                 size="small"
                 color={s.is_conflict ? 'warning' : 'default'}
-                sx={{ m: 0.2, cursor: isDraft ? 'grab' : 'default', fontSize: 11, maxWidth: 90 }}
+                sx={{ m: 0.2, cursor: 'grab', fontSize: 11, maxWidth: 90 }}
               />
             </Tooltip>
           )}
@@ -162,7 +162,7 @@ export default function DraggableScheduleGrid() {
           <Box
             ref={provided.innerRef}
             {...provided.droppableProps}
-            onClick={isDraft ? () => setPanel({ day, shiftType: type }) : undefined}
+            onClick={() => setPanel({ day, shiftType: type })}
             sx={{
               minHeight: 52,
               p: 0.5,
@@ -170,8 +170,8 @@ export default function DraggableScheduleGrid() {
               bgcolor: hasConflict ? '#fff8e1' : 'grey.50',
               border: '1px solid',
               borderColor: hasConflict ? 'warning.main' : 'divider',
-              cursor: isDraft ? 'pointer' : 'default',
-              '&:hover': isDraft ? { borderColor: 'primary.main', bgcolor: 'action.hover' } : {},
+              cursor: 'pointer',
+              '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
             }}
           >
             {/* Waiter group */}
@@ -236,7 +236,7 @@ export default function DraggableScheduleGrid() {
 
       {msg && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setMsg('')}>{msg}</Alert>}
 
-      {isDraft && (
+      {schedule && (
         <Typography variant="caption" color="text.secondary" display="block" mb={1}>
           לחץ על תא לעריכה · גרור chip להזזת משמרת
         </Typography>
