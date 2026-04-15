@@ -121,20 +121,28 @@ export default function PermanentConstraintsEditor() {
                 type="number"
                 size="small"
                 value={constraint.min_shifts_per_week}
-                onChange={e => setConstraint(p => ({ ...p, min_shifts_per_week: Math.max(0, parseInt(e.target.value) || 0) }))}
+                onChange={e => {
+                  const v = parseInt(e.target.value);
+                  if (!isNaN(v) && v >= 0) setConstraint(p => ({ ...p, min_shifts_per_week: v }));
+                  else if (e.target.value === '') setConstraint(p => ({ ...p, min_shifts_per_week: 0 }));
+                }}
                 helperText="העובד יקבל עדיפות לקבל לפחות כמה משמרות"
                 sx={{ width: 180 }}
-                slotProps={{ htmlInput: { min: 0, max: 6 } }}
+                slotProps={{ htmlInput: { min: 0 } }}
               />
               <TextField
                 label="מקסימום משמרות"
                 type="number"
                 size="small"
                 value={constraint.max_shifts_per_week}
-                onChange={e => setConstraint(p => ({ ...p, max_shifts_per_week: Math.min(6, Math.max(1, parseInt(e.target.value) || 5)) }))}
+                onChange={e => {
+                  const v = parseInt(e.target.value);
+                  if (!isNaN(v) && v >= 1) setConstraint(p => ({ ...p, max_shifts_per_week: v }));
+                  else if (e.target.value === '') setConstraint(p => ({ ...p, max_shifts_per_week: 1 }));
+                }}
                 helperText="העובד לא יקבל יותר ממספר זה"
                 sx={{ width: 180 }}
-                slotProps={{ htmlInput: { min: 1, max: 6 } }}
+                slotProps={{ htmlInput: { min: 1 } }}
               />
             </Box>
           </Paper>
